@@ -7,8 +7,10 @@ import com.example.backend.common.exception.BadRequestException;
 import com.example.backend.student.dto.StudentProfileRequest;
 import com.example.backend.student.dto.StudentProfileResponse;
 import com.example.backend.student.service.StudentProfileService;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,12 @@ class StudentProfileServiceTests {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private EntityManager entityManager;
+
     @Test
     void createsReadsAndUpdatesProfileForAuthenticatedEmail() {
         String email = createStudent("student@example.com");
@@ -38,13 +46,24 @@ class StudentProfileServiceTests {
         assertEquals(email, userRepository.findByEmail(email).orElseThrow().getStudentProfile().getUser().getEmail());
         assertEquals("3.75", created.getCgpa().toPlainString());
         assertEquals(List.of("Java", "Spring"), created.getSkills());
+        entityManager.flush();
+        assertEquals(2, jdbcTemplate.queryForObject(
+                "SELECT COUNT(id) FROM student_profile_skills WHERE student_profile_id = ?",
+                Integer.class, created.getId()));
 
         StudentProfileResponse read = studentProfileService.get(email);
         assertEquals(created.getId(), read.getId());
 
-        StudentProfileResponse updated = studentProfileService.update(email, profileRequest("3.90"));
+        StudentProfileRequest updateRequest = profileRequest("3.90");
+        updateRequest.setSkills(List.of("Kotlin"));
+        StudentProfileResponse updated = studentProfileService.update(email, updateRequest);
         assertEquals(created.getId(), updated.getId());
         assertEquals("3.90", updated.getCgpa().toPlainString());
+        assertEquals(List.of("Kotlin"), updated.getSkills());
+        entityManager.flush();
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(id) FROM student_profile_skills WHERE student_profile_id = ?",
+                Integer.class, created.getId()));
     }
 
     @Test

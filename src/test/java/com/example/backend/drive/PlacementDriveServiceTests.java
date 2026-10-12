@@ -8,9 +8,11 @@ import com.example.backend.drive.dto.PlacementDriveResponse;
 import com.example.backend.drive.dto.PlacementDriveStatusRequest;
 import com.example.backend.drive.entity.PlacementDriveStatus;
 import com.example.backend.drive.service.PlacementDriveService;
+import jakarta.persistence.EntityManager;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,12 @@ class PlacementDriveServiceTests {
     private CompanyRepository companyRepository;
 
     @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
     private Validator validator;
 
     @Test
@@ -45,6 +53,10 @@ class PlacementDriveServiceTests {
         PlacementDriveResponse created = placementDriveService.create(driveRequest(companyId));
 
         assertNotNull(created.getId());
+        entityManager.flush();
+        assertEquals(2, jdbcTemplate.queryForObject(
+                "SELECT COUNT(id) FROM placement_drive_eligible_branches WHERE placement_drive_id = ?",
+                Integer.class, created.getId()));
         assertEquals(companyId, created.getCompanyId());
         assertEquals("Example Company", created.getCompanyName());
         assertNotNull(created.getCreatedAt());
@@ -56,9 +68,15 @@ class PlacementDriveServiceTests {
 
         PlacementDriveRequest updateRequest = driveRequest(companyId);
         updateRequest.setDriveTitle("Updated Software Engineer Drive");
+        updateRequest.setEligibleBranches(List.of("Electrical Engineering"));
         PlacementDriveResponse updated = placementDriveService.update(created.getId(), updateRequest);
         assertEquals("Updated Software Engineer Drive", updated.getDriveTitle());
         assertEquals(created.getCreatedAt(), updated.getCreatedAt());
+        assertEquals(List.of("Electrical Engineering"), updated.getEligibleBranches());
+        entityManager.flush();
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(id) FROM placement_drive_eligible_branches WHERE placement_drive_id = ?",
+                Integer.class, created.getId()));
 
         placementDriveService.delete(created.getId());
         assertEquals(0, placementDriveService.getAll().size());

@@ -1,15 +1,15 @@
 package com.example.backend.student.entity;
 
 import com.example.backend.auth.entity.User;
-import jakarta.persistence.CollectionTable;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
@@ -47,10 +47,8 @@ public class StudentProfile {
     @Column(nullable = false)
     private Integer backlogs;
 
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "student_profile_skills", joinColumns = @JoinColumn(name = "student_profile_id"))
-    @Column(name = "skill", nullable = false, length = 100)
-    private List<String> skills = new ArrayList<>();
+    @OneToMany(mappedBy = "studentProfile", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<StudentProfileSkill> skillEntries = new ArrayList<>();
 
     @Column(length = 2048)
     private String resumeUrl;
@@ -71,8 +69,13 @@ public class StudentProfile {
     public void setCgpa(BigDecimal cgpa) { this.cgpa = cgpa; }
     public Integer getBacklogs() { return backlogs; }
     public void setBacklogs(Integer backlogs) { this.backlogs = backlogs; }
-    public List<String> getSkills() { return skills; }
-    public void setSkills(List<String> skills) { this.skills = new ArrayList<>(skills); }
+    public List<String> getSkills() {
+        return skillEntries.stream().map(StudentProfileSkill::getSkill).toList();
+    }
+    public void setSkills(List<String> skills) {
+        skillEntries.clear();
+        skills.forEach(skill -> skillEntries.add(new StudentProfileSkill(this, skill)));
+    }
     public String getResumeUrl() { return resumeUrl; }
     public void setResumeUrl(String resumeUrl) { this.resumeUrl = resumeUrl; }
 }
