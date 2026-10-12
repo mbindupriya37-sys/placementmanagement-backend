@@ -17,12 +17,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@ActiveProfiles("test")
-@TestPropertySource(properties =
-        "app.cors.allowed-origins=https://placementos-frontend.example.com,http://localhost:5173")
+@ActiveProfiles("prod")
+@TestPropertySource(properties = {
+        "PLACEMENTOS_CORS_ALLOWED_ORIGINS=https://placementos-frontend-tl1q.onrender.com",
+        "PLACEMENTOS_DB_URL=jdbc:h2:mem:corsprod;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
+        "PLACEMENTOS_DB_USERNAME=sa",
+        "PLACEMENTOS_DB_PASSWORD=",
+        "PLACEMENTOS_JWT_SECRET=testsecretkeytestsecretkeytestsecretkeytestsecretkey",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect"
+})
 class CorsSecurityIntegrationTests {
 
-    private static final String FRONTEND_ORIGIN = "https://placementos-frontend.example.com";
+    private static final String FRONTEND_ORIGIN = "https://placementos-frontend-tl1q.onrender.com";
 
     @Autowired
     private MockMvc mockMvc;

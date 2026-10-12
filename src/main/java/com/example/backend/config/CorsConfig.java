@@ -20,10 +20,7 @@ public class CorsConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        List<String> origins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
-                .filter(origin -> !origin.isEmpty())
-                .collect(Collectors.toList());
+        List<String> origins = parseAllowedOrigins(allowedOrigins);
         config.setAllowedOrigins(origins);
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
@@ -33,5 +30,33 @@ public class CorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    static List<String> parseAllowedOrigins(String configuredOrigins) {
+        if (configuredOrigins == null) {
+            return List.of();
+        }
+
+        String value = configuredOrigins.trim();
+        if (value.startsWith("[") && value.endsWith("]")) {
+            value = value.substring(1, value.length() - 1);
+        }
+
+        return Arrays.stream(value.split(","))
+                .map(String::trim)
+                .map(CorsConfig::removeMatchingQuotes)
+                .filter(origin -> !origin.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    private static String removeMatchingQuotes(String value) {
+        if (value.length() >= 2) {
+            char first = value.charAt(0);
+            char last = value.charAt(value.length() - 1);
+            if ((first == '"' && last == '"') || (first == '\'' && last == '\'')) {
+                return value.substring(1, value.length() - 1).trim();
+            }
+        }
+        return value;
     }
 }
